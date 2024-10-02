@@ -3,23 +3,14 @@ import 'primeicons/primeicons.css';
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
 import 'primereact/resources/primereact.css';
 import "primeflex/primeflex.css";
-
 import '../../index.css';
-
-
 import { classNames } from 'primereact/utils';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { EmpleadoService } from '../DataTables/EmpleadoService';
-
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
-import { FileUpload } from 'primereact/fileupload';
-// import { Rating } from 'primereact/rating';
 import { Toolbar } from 'primereact/toolbar';
-// import { InputTextarea } from 'primereact/inputtextarea';
-// import { RadioButton } from 'primereact/radiobutton';
-// import { InputNumber } from 'primereact/inputnumber';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import useToken from '../App/useToken';
@@ -38,11 +29,11 @@ const DataTableCrudDemo = () => {
     let emptyProduct = {
         id: null,
         nombre: '',
-        bandera: null,
+        posicion: '',
+        descripcion: '',
     };
 
     const [products, setProducts] = useState(null);
-    const [selectedFile, setselectedFile] = useState(null);
     const [productDialog, setProductDialog] = useState(false);
     const [deleteProductDialog, setDeleteProductDialog] = useState(false);
     const [deleteProductsDialog, setDeleteProductsDialog] = useState(false);
@@ -58,7 +49,7 @@ const DataTableCrudDemo = () => {
 
     useEffect(() => {
         empleadoService.getTeamsList().then(data => {
-            if (data == "Error"){
+            if (data === "Error"){
                 setPermisoPagina(null);
                 setProducts(null);
             }
@@ -92,32 +83,46 @@ const DataTableCrudDemo = () => {
         setSubmitted(true);
         let _products = [...products];
         let _product = {...product};
-        if (product.id) {
-            const index = findIndexById(product.id);
 
-            _products[index] = _product;
-            toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Product Updated', life: 3000 });
+
+        let nombre = _product.nombre;
+        let posicion = _product.posicion;
+        let descripcion = _product.descripcion;
+        let estado = true;
+
+        // evaluar que no venga vacio ningun campo
+        if (nombre === '' || posicion === '' || descripcion === '' || estado === ''){
+            return;
+        }
+
+        // validar que los campos sean correctos y no tengan caracteres especiales
+        if (nombre.match(/^[a-zA-Z\s]*$/) === null || posicion.match(/^[a-zA-Z\s]*$/) === null || descripcion.match(/^[a-zA-Z\s]*$/) === null){
+            toast.current.show({ severity: 'warn', summary: 'Advertencia', detail: 'Caracteres invalidos', life: 3000 });
+            return;
+        }
+
+        if (product.id) {
+
+            const index = findIndexById(product.id);
+            const newTeamResponse = await empleadoService.updateEmpleado({
+                id: product.id,
+                nombre: product.nombre,
+                posicion: product.posicion,
+                descripcion: product.descripcion,
+                estado: product.estado
+            },token);
+
+            if ( newTeamResponse.statusCode <= 300 ){
+                empleadoService.getTeamsList(token).then(data => setProducts(data));
+                toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Actualizado Correctamente', life: 3000 });
+                _products.push(_product);
+            }
+            else{
+                toast.current.show({ severity: 'error', summary: 'Error', detail: 'Error Al Actualizar Empleado', life: 3000 });
+            }
         }
         else {
-
-            let nombre = _product.nombre;
-            let posicion = _product.posicion;
-            let descripcion = _product.descripcion;
-            let estado = true;
-
-            // evaluar que no venga vacio ningun campo
-            if (nombre === '' || posicion === '' || descripcion === '' || estado === ''){
-                return;
-            }
-
-            // validar que los campos sean correctos y no tengan caracteres especiales
-            if (nombre.match(/^[a-zA-Z\s]*$/) === null || posicion.match(/^[a-zA-Z\s]*$/) === null || descripcion.match(/^[a-zA-Z\s]*$/) === null){
-                toast.current.show({ severity: 'warn', summary: 'Advertencia', detail: 'Caracteres invalidos', life: 3000 });
-                return;
-            }
-
-            //let bandera = _product.bandera;
-            const newTeamResponse = await empleadoService.newTeam({
+            const newTeamResponse = await empleadoService.newEmpleado({
                 nombre,
                 posicion,
                 descripcion,
@@ -137,19 +142,26 @@ const DataTableCrudDemo = () => {
         setProduct(emptyProduct);
     }
 
-    // const editProduct = (product) => {
-    //     setProduct({...product});
-    //     setProductDialog(true);
-    // }
+    const editProduct = (product) => {
+        setProduct({...product});
+        setProductDialog(true);
+    }
 
-    // const confirmDeleteProduct = (product) => {
-    //     setProduct(product);
-    //     setDeleteProductDialog(true);
-    // }
+    const confirmDeleteProduct = (product) => {
+        setProduct(product);
+        setDeleteProductDialog(true);
+    }
 
     const deleteProduct = () => {
-        let _products = products.filter(val => val.id !== product.id);
-        setProducts(_products);
+        let _products = products.filter(val => val.id === product.id);
+        let _products_avaibles = products.filter(val => val.id !== product.id);
+
+        let id = product.id;
+        const deleteEmpleadoResponse = empleadoService.deleteEmpleado({
+            id
+        },token);
+
+        setProducts(_products_avaibles);
         setDeleteProductDialog(false);
         setProduct(emptyProduct);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
@@ -163,7 +175,6 @@ const DataTableCrudDemo = () => {
                 break;
             }
         }
-
         return index;
     }
 
@@ -220,6 +231,15 @@ const DataTableCrudDemo = () => {
     //         alt={rowData.bandera} className="product-image" />
     // }
 
+    const actionBodyTemplate = (rowData) => {
+        return (
+            <React.Fragment>
+                <Button icon="pi pi-pencil" rounded outlined className="mr-2" onClick={() => editProduct(rowData)} />
+                <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteProduct(rowData)} />
+            </React.Fragment>
+        );
+    };
+
     const header = (
         <div className="table-header">
             <h5 className="mx-0 my-1">Selecciones</h5>
@@ -274,6 +294,8 @@ const DataTableCrudDemo = () => {
                             style={{ minWidth: '6rem' }} 
                             body={rowData => rowData.estado === true ? 'Activo' : 'Inactivo'}> 
                         </Column>
+                        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '12rem' }}></Column>
+
                     </DataTable>
                 </div>
 
