@@ -14,6 +14,7 @@ import { Toolbar } from 'primereact/toolbar';
 import { Dialog } from 'primereact/dialog';
 import { Checkbox } from 'primereact/checkbox';
 import { InputText } from 'primereact/inputtext';
+import { FilterMatchMode, FilterService } from 'primereact/api';
 import useToken from '../App/useToken';
 
 
@@ -26,6 +27,14 @@ function App() {
 }
 
 const DataTableCrudDemo = () => {
+    
+    FilterService.register('custom_activity', (value, filters) => {
+        const [from, to] = filters ?? [null, null];
+        if (from === null && to === null) return true;
+        if (from !== null && to === null) return from <= value;
+        if (from === null && to !== null) return value <= to;
+        return from <= value && value <= to;
+      });
 
     let emptyProduct = {
         id: null,
@@ -49,7 +58,15 @@ const DataTableCrudDemo = () => {
     const { token } = useToken();
     const [permisoPagina, setPermisoPagina] = useState(null);
 
+    const [filters, setFilters] = useState({
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+        posicion: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    });
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
+        setLoading(false);
         empleadoService.getTeamsList().then(data => {
             if (data === "Error"){
                 setPermisoPagina(null);
@@ -251,19 +268,20 @@ const DataTableCrudDemo = () => {
                 <Toast ref={toast} />
 
                 <div className="card">
-                    {/* <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar> */}
                     <Toolbar className="mb-4" left={leftToolbarTemplate} ></Toolbar>
 
                     <DataTable ref={dt} value={empleados} selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
                         dataKey="id" paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} selecciones"
-                        globalFilter={globalFilter} header={header} responsiveLayout="scroll">
-                        {/* <Column selectionMode="multiple" headerStyle={{ width: '3rem' }} exportable={false}></Column> */}
+                        globalFilter={globalFilter} header={header} responsiveLayout="scroll"
+                        filters={filters} filterDisplay="row" loading={loading}
+                        >
                         <Column selectionMode="multiple" exportable={false}></Column>
                         <Column field="id" header="id" sortable style={{ minWidth: '6rem' }}></Column>
-                        <Column field="nombre" header="nombre" sortable style={{ minWidth: '6rem' }}></Column>
-                        <Column field="posicion" header="posicion" sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="nombre" header="nombre" filter filterPlaceholder="Buscar por nombre" sortable style={{ minWidth: '6rem' }}></Column>
+                        <Column field="posicion" header="posicion" filter filterPlaceholder="Buscar por posicion"  filterField="posicion"  sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="descripcion" header="descripcion" sortable style={{ minWidth: '6rem' }} ></Column>
                         <Column 
                             field="estado" 
                             header="estado" 
