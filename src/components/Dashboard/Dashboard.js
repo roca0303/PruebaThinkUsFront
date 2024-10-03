@@ -12,6 +12,7 @@ import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Toolbar } from 'primereact/toolbar';
 import { Dialog } from 'primereact/dialog';
+import { Checkbox } from 'primereact/checkbox';
 import { InputText } from 'primereact/inputtext';
 import useToken from '../App/useToken';
 
@@ -31,9 +32,10 @@ const DataTableCrudDemo = () => {
         nombre: '',
         posicion: '',
         descripcion: '',
+        estado: true
     };
 
-    const [products, setProducts] = useState(null);
+    const [empleados, setEmpleados] = useState(null);
     const [productDialog, setProductDialog] = useState(false);
     const [deleteProductDialog, setDeleteProductDialog] = useState(false);
     const [deleteProductsDialog, setDeleteProductsDialog] = useState(false);
@@ -51,14 +53,14 @@ const DataTableCrudDemo = () => {
         empleadoService.getTeamsList().then(data => {
             if (data === "Error"){
                 setPermisoPagina(null);
-                setProducts(null);
+                setEmpleados(null);
             }
             else{
                 setPermisoPagina(true);
-                setProducts(data);
+                setEmpleados(data);
             }
         });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     const openNew = () => {
         setProduct(emptyProduct);
@@ -81,7 +83,7 @@ const DataTableCrudDemo = () => {
 
     const saveProduct = async e => {
         setSubmitted(true);
-        let _products = [...products];
+        let _products = [...empleados];
         let _product = {...product};
 
 
@@ -103,7 +105,7 @@ const DataTableCrudDemo = () => {
 
         if (product.id) {
 
-            const index = findIndexById(product.id);
+            //const index = findIndexById(product.id);
             const newTeamResponse = await empleadoService.updateEmpleado({
                 id: product.id,
                 nombre: product.nombre,
@@ -113,7 +115,7 @@ const DataTableCrudDemo = () => {
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setProducts(data));
+                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Actualizado Correctamente', life: 3000 });
                 _products.push(_product);
             }
@@ -130,7 +132,7 @@ const DataTableCrudDemo = () => {
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setProducts(data));
+                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Creado Correctamente', life: 3000 });
             }
             else{
@@ -153,29 +155,18 @@ const DataTableCrudDemo = () => {
     }
 
     const deleteProduct = () => {
-        let _products = products.filter(val => val.id === product.id);
-        let _products_avaibles = products.filter(val => val.id !== product.id);
+        //let _empleados = empleados.filter(val => val.id === product.id);
+        let _empleados_avaibles = empleados.filter(val => val.id !== product.id);
 
         let id = product.id;
         const deleteEmpleadoResponse = empleadoService.deleteEmpleado({
             id
         },token);
 
-        setProducts(_products_avaibles);
+        setEmpleados(_empleados_avaibles);
         setDeleteProductDialog(false);
         setProduct(emptyProduct);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
-    }
-
-    const findIndexById = (id) => {
-        let index = -1;
-        for (let i = 0; i < products.length; i++) {
-            if (products[i].id === id) {
-                index = i;
-                break;
-            }
-        }
-        return index;
     }
 
     const confirmDeleteSelected = () => {
@@ -183,31 +174,25 @@ const DataTableCrudDemo = () => {
     }
 
     const deleteSelectedProducts = () => {
-        let _products = products.filter(val => selectedProducts.includes(val));
-        let _products_avaibles = products.filter(val => !selectedProducts.includes(val));
+        let _empleados = empleados.filter(val => selectedProducts.includes(val));
+        let _empleados_avaibles = empleados.filter(val => !selectedProducts.includes(val));
 
-        _products.map ( async (product) => {
+        _empleados.map ( async (product) => {
             let id = product.id;
-            // enviar el id del producto a eliminar
             const deleteEmpleadoResponse = await empleadoService.deleteEmpleado({
                 id
             },token);
         });
 
-        setProducts(_products_avaibles);
+        setEmpleados(_empleados_avaibles);
         setDeleteProductsDialog(false);
         setSelectedProducts(null);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleados Borrados', life: 3000 });
     }
 
-    // const onCategoryChange = (e) => {
-    //     let _product = {...product};
-    //     _product['category'] = e.value;
-    //     setProduct(_product);
-    // }
-
     const onInputChange = (e, name) => {
-        const val = (e.target && e.target.value) || '';
+        const val = e.target.type === 'checkbox' ? e.checked : e.target.value;
+        //const val = (e.target && e.target.value) || '';
         let _product = {...product};
         _product[`${name}`] = val;
 
@@ -222,14 +207,6 @@ const DataTableCrudDemo = () => {
             </React.Fragment>
         )
     }
-
-
-    // const imageBodyTemplate = (rowData) => {
-    //     let url = process.env.REACT_APP_URL_IMAGES+rowData.bandera;
-    //     return <img src={url} 
-    //         onError={(e) => e.target.src='https://www.primefaces.org/wp-content/uploads/2020/05/placeholder.png'} 
-    //         alt={rowData.bandera} className="product-image" />
-    // }
 
     const actionBodyTemplate = (rowData) => {
         return (
@@ -277,7 +254,7 @@ const DataTableCrudDemo = () => {
                     {/* <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar> */}
                     <Toolbar className="mb-4" left={leftToolbarTemplate} ></Toolbar>
 
-                    <DataTable ref={dt} value={products} selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
+                    <DataTable ref={dt} value={empleados} selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
                         dataKey="id" paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} selecciones"
@@ -316,19 +293,23 @@ const DataTableCrudDemo = () => {
                         <InputText id="descripcion" value={product.descripcion} onChange={(e) => onInputChange(e, 'descripcion')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.descripcion })} />
                         {submitted && !product.descripcion && <small className="p-error">La descripción del empleado es requerida.</small>}
                     </div>
+                    <div className="field-checkbox">
+                        <Checkbox inputId="estado" checked={product.estado} onChange={(e) => onInputChange(e, 'estado')} />
+                        <label htmlFor="estado">Activo</label>
+                    </div>
                 </Dialog>
 
                 <Dialog visible={deleteProductDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteProductDialogFooter} onHide={hideDeleteProductDialog}>
                     <div className="confirmation-content">
                         <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem'}} />
-                        {product && <span>Are you sure you want to delete <b>{product.name}</b>?</span>}
+                        {product && <span>Esta seguro de eliminar el registro <b>{product.name}</b>?</span>}
                     </div>
                 </Dialog>
 
                 <Dialog visible={deleteProductsDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteProductsDialogFooter} onHide={hideDeleteProductsDialog}>
                     <div className="confirmation-content">
                         <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem'}} />
-                        {product && <span>Are you sure you want to delete the selected products?</span>}
+                        {product && <span>Esta seguro de eliminar los registros seleccionados?</span>}
                     </div>
                 </Dialog>
             </div>
