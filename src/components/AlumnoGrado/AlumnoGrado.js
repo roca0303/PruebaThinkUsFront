@@ -7,26 +7,28 @@ import '../../index.css';
 import { classNames } from 'primereact/utils';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { EmpleadoService } from '../DataTables/EmpleadoService';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Toolbar } from 'primereact/toolbar';
 import { Dialog } from 'primereact/dialog';
-import { Checkbox } from 'primereact/checkbox';
 import { InputText } from 'primereact/inputtext';
 import { FilterMatchMode, FilterService } from 'primereact/api';
 import useToken from '../App/useToken';
-
+import { AlumnoService } from '../Services/AlumnoService';
+import { AlumnoGradoService } from '../Services/AlumnoGradoService';
+import { GradoService } from '../Services/GradoService';
+import { ProfesorService } from '../Services/ProfesorService';
+import { AutoComplete } from 'primereact/autocomplete';
 
 function App() {
     return (
         <div>
-            <DataTableCrudAlumno />
+            <DataTableCrudAlumnoGrado />
         </div>
     );
 }
 
-const DataTableCrudAlumno = () => {
+const DataTableCrudAlumnoGrado = () => {
     
     FilterService.register('custom_activity', (value, filters) => {
         const [from, to] = filters ?? [null, null];
@@ -38,13 +40,16 @@ const DataTableCrudAlumno = () => {
 
     let emptyProduct = {
         id: null,
-        nombre: '',
-        posicion: '',
-        descripcion: '',
-        estado: true
+        alumnoId: '',
+        gradoId: '',
+        grupo: '',
     };
 
-    const [empleados, setEmpleados] = useState(null);
+    const [alumnos, setAlumnos] = useState(null);
+    const [alumnogrado, setAlumnoGrado] = useState(null);
+    const [profesores, setProfesores] = useState(null);
+    const [grados, setGrados] = useState(null);
+    const [selectedProfesor, setSelectedProfesor] = useState(null);
     const [productDialog, setProductDialog] = useState(false);
     const [deleteProductDialog, setDeleteProductDialog] = useState(false);
     const [deleteProductsDialog, setDeleteProductsDialog] = useState(false);
@@ -54,29 +59,87 @@ const DataTableCrudAlumno = () => {
     const [globalFilter, setGlobalFilter] = useState(null);
     const toast = useRef(null);
     const dt = useRef(null);
-    const empleadoService = new EmpleadoService();
+    const alumnoService = new AlumnoService();
+    const alumnoGradoService = new AlumnoGradoService();
+    const profesorService = new ProfesorService();
+    const gradoService = new GradoService();
     const { token } = useToken();
     const [permisoPagina, setPermisoPagina] = useState(null);
+    const [filteredProfesores, setFilteredProfesores] = useState([]);
+    const [filteredAlumnos, setFilteredAlumnos] = useState([]);
+    const [selectedAlumno, setSelectedAlumno] = useState([]);
+
 
     const [filters, setFilters] = useState({
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-        posicion: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setLoading(false);
-        empleadoService.getTeamsList().then(data => {
+        // Traigo Los Datos de la API, tabla alumnos grado
+        alumnoGradoService.getAlumnoList().then(data => {
             if (data === "Error"){
                 setPermisoPagina(null);
-                setEmpleados(null);
+                setAlumnoGrado(null);
             }
             else{
                 setPermisoPagina(true);
-                setEmpleados(data);
+                setAlumnoGrado(data);
             }
         });
+
+        // Traigo Los Datos de la API, tabla profesores
+        profesorService.getProfesorList().then(data => {
+            if (data === "Error"){
+                setPermisoPagina(null);
+                setProfesores(null);
+            }
+            else{
+                setPermisoPagina(true);
+                const formattedProfesores = data.map(prof => ({
+                    id: prof.id,
+                    label: `${prof.nombre} ${prof.apellidos}` // Concatenamos nombre y apellido
+                }));
+                //setProfesores(formattedProfesores);
+            }
+        });
+
+        // Traigo Los Datos de la API, tabla grados
+        gradoService.getAlumnoList().then(data => {
+            if (data === "Error"){
+                setPermisoPagina(null);
+                setGrados(null);
+            }
+            else{
+                setPermisoPagina(true);
+                const formattedProfesores = data.map(prof => ({
+                    id: prof.id,
+                    label: `${prof.nombre}` // Concatenamos nombre y apellido
+                }));
+                setGrados(formattedProfesores);
+            }
+        });
+
+        // Traigo Los Datos de la API, tabla alumnos
+        alumnoService.getAlumnoList().then(data => {
+            if (data === "Error"){
+                setPermisoPagina(null);
+                setAlumnos(null);
+            }
+            else{
+                setPermisoPagina(true);
+
+                const formattedProfesores = data.map(prof => ({
+                    id: prof.id,
+                    label: `${prof.nombre} ${prof.apellidos}` // Concatenamos nombre y apellido
+                }));
+                setAlumnos(formattedProfesores);
+            }
+        });
+
+
     }, []);
 
     const openNew = () => {
@@ -98,41 +161,76 @@ const DataTableCrudAlumno = () => {
         setDeleteProductsDialog(false);
     }
 
+    const handleProfesorSelect = (e) => {
+        // Al seleccionar un profesor, guardamos su id en el estado
+        setSelectedProfesor(e.value ? e.value.id : null);
+    };
+
+    const handleAlumnoSelect = (e) => {
+        // Al seleccionar un profesor, guardamos su id en el estado
+        setSelectedAlumno(e.value ? e.value.id : null);
+    };
+
+    const handleCompleteMethod = (e) => {
+        console.log(e);
+        const query = e.query.toLowerCase();
+
+        const filteredProfessors = grados.filter(prof =>
+            prof.label.toLowerCase().includes(query)
+        );
+        setFilteredProfesores(filteredProfessors);
+    };
+
+    const handleCompleteAlumnosMethod = (e) => {
+        const query = e.query.toLowerCase();
+
+        const filteredProfessors = alumnos.filter(prof =>
+            prof.label.toLowerCase().includes(query)
+        );
+        setFilteredAlumnos(filteredProfessors);
+    };
+
+
     const saveProduct = async e => {
         setSubmitted(true);
-        let _products = [...empleados];
+        let _products = [...alumnos];
         let _product = {...product};
 
+        // _product.AlumnoId = selectedAlumno;
+        // _product.GradoId = selectedProfesor;
 
-        let nombre = _product.nombre;
-        let posicion = _product.posicion;
-        let descripcion = _product.descripcion;
-        let estado = true;
+        let alumnoId = selectedAlumno;
+        let gradoId = selectedProfesor;
+        let grupo = _product.grupo;
+        let alumno = selectedAlumno;
+        let grado = selectedProfesor;
 
-        // evaluar que no venga vacio ningun campo
-        if (nombre === '' || posicion === '' || descripcion === '' || estado === ''){
-            return;
-        }
+        // // evaluar que no venga vacio ningun campo
+        // if (Nombre === '' || profesorId === '' ){
+        //     console.log(_product);
+        //     return;
+        // }
 
         // validar que los campos sean correctos y no tengan caracteres especiales
-        if (nombre.match(/^[a-zA-Z\s]*$/) === null || posicion.match(/^[a-zA-Z\s]*$/) === null || descripcion.match(/^[a-zA-Z\s]*$/) === null){
-            toast.current.show({ severity: 'warn', summary: 'Advertencia', detail: 'Caracteres invalidos', life: 3000 });
-            return;
-        }
-
+        // if (Nombre.match(/^[a-zA-Z\s]*$/) === null || profesorId < 0 ){
+        //     toast.current.show({ severity: 'warn', summary: 'Advertencia', detail: 'Caracteres invalidos', life: 3000 });
+        //     return;
+        // }
+        
         if (product.id) {
 
             //const index = findIndexById(product.id);
-            const newTeamResponse = await empleadoService.updateEmpleado({
+            const newTeamResponse = await alumnoGradoService.updateEmpleado({
                 id: product.id,
-                nombre: product.nombre,
-                posicion: product.posicion,
-                descripcion: product.descripcion,
-                estado: product.estado
+                alumnoId,
+                gradoId,
+                grupo,
+                alumno,
+                grado
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
+                alumnoGradoService.getAlumnoList(token).then(data => setAlumnoGrado(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Actualizado Correctamente', life: 3000 });
                 _products.push(_product);
             }
@@ -141,15 +239,14 @@ const DataTableCrudAlumno = () => {
             }
         }
         else {
-            const newTeamResponse = await empleadoService.newEmpleado({
-                nombre,
-                posicion,
-                descripcion,
-                estado
+            const newTeamResponse = await alumnoGradoService.newEmpleado({
+                alumnoId,
+                gradoId,
+                grupo
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
+                alumnoGradoService.getAlumnoList(token).then(data => setAlumnoGrado(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Creado Correctamente', life: 3000 });
             }
             else{
@@ -162,7 +259,10 @@ const DataTableCrudAlumno = () => {
     }
 
     const editProduct = (product) => {
+        console.log(product);
         setProduct({...product});
+        setSelectedAlumno(product.alumno.id);
+        setSelectedProfesor(product.grado.id);
         setProductDialog(true);
     }
 
@@ -172,15 +272,14 @@ const DataTableCrudAlumno = () => {
     }
 
     const deleteProduct = () => {
-        //let _empleados = empleados.filter(val => val.id === product.id);
-        let _empleados_avaibles = empleados.filter(val => val.id !== product.id);
+        let _empleados_avaibles = alumnogrado.filter(val => val.id !== product.id);
 
         let id = product.id;
-        const deleteEmpleadoResponse = empleadoService.deleteEmpleado({
+        const deleteEmpleadoResponse = alumnoGradoService.deleteEmpleado({
             id
         },token);
 
-        setEmpleados(_empleados_avaibles);
+        setAlumnoGrado(_empleados_avaibles);
         setDeleteProductDialog(false);
         setProduct(emptyProduct);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
@@ -191,17 +290,17 @@ const DataTableCrudAlumno = () => {
     }
 
     const deleteSelectedProducts = () => {
-        let _empleados = empleados.filter(val => selectedProducts.includes(val));
-        let _empleados_avaibles = empleados.filter(val => !selectedProducts.includes(val));
+        let _empleados = alumnogrado.filter(val => selectedProducts.includes(val));
+        let _empleados_avaibles = alumnogrado.filter(val => !selectedProducts.includes(val));
 
         _empleados.map ( async (product) => {
             let id = product.id;
-            const deleteEmpleadoResponse = await empleadoService.deleteEmpleado({
+            const deleteEmpleadoResponse = await alumnoGradoService.deleteEmpleado({
                 id
             },token);
         });
 
-        setEmpleados(_empleados_avaibles);
+        setAlumnoGrado(_empleados_avaibles);
         setDeleteProductsDialog(false);
         setSelectedProducts(null);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleados Borrados', life: 3000 });
@@ -270,7 +369,7 @@ const DataTableCrudAlumno = () => {
                 <div className="card">
                     <Toolbar className="mb-4" left={leftToolbarTemplate} ></Toolbar>
 
-                    <DataTable ref={dt} value={empleados} className="data-table-80" selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
+                    <DataTable ref={dt} value={alumnogrado} className="data-table-80" selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
                         dataKey="id" paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} selecciones"
@@ -279,42 +378,59 @@ const DataTableCrudAlumno = () => {
                         >
                         <Column selectionMode="multiple" exportable={false}></Column>
                         <Column field="id" header="id" sortable style={{ minWidth: '6rem' }}></Column>
-                        <Column field="nombre" header="nombre" filter filterPlaceholder="Buscar por nombre" sortable style={{ minWidth: '6rem' }}></Column>
-                        <Column field="posicion" header="posicion" filter filterPlaceholder="Buscar por posicion"  filterField="posicion"  sortable style={{ minWidth: '6rem' }} ></Column>
-                        <Column field="descripcion" header="descripcion" sortable style={{ minWidth: '6rem' }} ></Column>
-                        <Column 
-                            field="estado" 
-                            header="estado" 
-                            sortable 
-                            style={{ minWidth: '6rem' }} 
-                            body={rowData => rowData.estado === true ? 'Activo' : 'Inactivo'}> 
-                        </Column>
-                        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '12rem' }}></Column>
+                        <Column field="alumno.id" header="Alumno Id" sortable style={{ minWidth: '6rem' }}></Column>
+                        <Column field="alumno.nombre" header="Alumno Nombre" sortable style={{ minWidth: '6rem' }}></Column>
+                        <Column field="grado.id" header="Grado Id" sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="grado.nombre" header="Grado Nombre" sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="grado.profesor.nombre" header="Profesor ID" sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="grupo" header="Grupo" sortable style={{ minWidth: '6rem' }} ></Column>
 
+                        <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '12rem' }}></Column>
                     </DataTable>
                 </div>
 
-                <Dialog visible={productDialog} style={{ width: '450px' }} header="Nuevo Empleado" modal className="p-fluid" footer={productDialogFooter} onHide={hideDialog}>
+                <Dialog visible={productDialog} style={{ width: '450px' }} header="Nuevo Curso" modal className="p-fluid" footer={productDialogFooter} onHide={hideDialog}>
 
                     <div className="field">
-                        <label htmlFor="nombre">Nombre</label>
-                        <InputText id="nombre" value={product.nombre} onChange={(e) => onInputChange(e, 'nombre')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.nombre })} />
-                        {submitted && !product.nombre && <small className="p-error">El Nombre es requerido.</small>}
+                        <label htmlFor="alumno">Alumno</label>
+                        <AutoComplete
+                            id="alumno"
+                            value={selectedAlumno}
+                            suggestions={filteredAlumnos} // Usamos el estado 'filteredProfesores' como las sugerencias
+                            completeMethod={handleCompleteAlumnosMethod} // Llamamos a nuestra función de filtrado
+                            field="label" // Especificamos que vamos a mostrar el campo 'label' (nombre + apellido)
+                            onChange={handleAlumnoSelect}
+                            dropdown
+                            required
+                            placeholder="Buscar alumno"
+                            className={classNames({ 'p-invalid': submitted && !selectedAlumno })}
+                        />
+                        {submitted && !selectedProfesor && <small className="p-error">El profesor es requerido.</small>}
                     </div>
+
                     <div className="field">
-                        <label htmlFor="posicion">Posicion</label>
-                        <InputText id="posicion" value={product.posicion} onChange={(e) => onInputChange(e, 'posicion')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.posicion })} />
-                        {submitted && !product.posicion && <small className="p-error">La Posición del empleado es requerida.</small>}
+                        <label htmlFor="grado">Grado</label>
+                        <AutoComplete
+                            id="grado"
+                            value={selectedProfesor}
+                            suggestions={filteredProfesores} 
+                            completeMethod={handleCompleteMethod}
+                            field="label" 
+                            onChange={handleProfesorSelect}
+                            dropdown
+                            required
+                            placeholder="Buscar profesor"
+                            className={classNames({ 'p-invalid': submitted && !selectedProfesor })}
+                        />
+                        {submitted && !selectedProfesor && <small className="p-error">El grado es requerido.</small>}
                     </div>
+
                     <div className="field">
-                        <label htmlFor="descripcion">Descripción</label>
-                        <InputText id="descripcion" value={product.descripcion} onChange={(e) => onInputChange(e, 'descripcion')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.descripcion })} />
-                        {submitted && !product.descripcion && <small className="p-error">La descripción del empleado es requerida.</small>}
+                        <label htmlFor="grupo">Grupo</label>
+                        <InputText id="grupo" value={product.grupo} onChange={(e) => onInputChange(e, 'grupo')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.grupo })} />
+                        {submitted && !product.grupo && <small className="p-error">El Grupo es requerido.</small>}
                     </div>
-                    <div className="field-checkbox">
-                        <Checkbox inputId="estado" checked={product.estado} onChange={(e) => onInputChange(e, 'estado')} />
-                        <label htmlFor="estado">Activo</label>
-                    </div>
+
                 </Dialog>
 
                 <Dialog visible={deleteProductDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteProductDialogFooter} onHide={hideDeleteProductDialog}>

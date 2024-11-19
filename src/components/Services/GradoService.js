@@ -1,9 +1,9 @@
 
-export class EmpleadoService {
+export class GradoService {
 
-    async getTeamsList() {
+    async getAlumnoList() {
         try {
-            const response = await fetch('http://localhost:43497/api/Empleado', {
+            const response = await fetch('http://localhost:43497/api/Grado', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -21,9 +21,10 @@ export class EmpleadoService {
             return "Error"; // O lanza un error si prefieres
         }
     }
+
 //RXJS PATRIN DE DISEÑO
     newEmpleado(empleadoData, token) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado', {
+        var respuesta = fetch('http://localhost:43497/api/Grado', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -46,7 +47,7 @@ export class EmpleadoService {
     }
 
     deleteEmpleado(id) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado/'+id.id, {
+        var respuesta = fetch('http://localhost:43497/api/Grado/'+id.id, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -68,7 +69,7 @@ export class EmpleadoService {
     }
 
     updateEmpleado(empleadoData) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado/'+empleadoData.id, {
+        var respuesta = fetch('http://localhost:43497/api/Grado/'+empleadoData.id, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',

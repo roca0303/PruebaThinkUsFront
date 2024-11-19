@@ -11887,4 +11887,8 @@ textarea.form-control-lg {
   }
 }
 
+.data-table-80 {
+  width: 90%;
+  margin: 0 auto; /* Esto es opcional, lo usa para centrar */
+}
 /*# sourceMappingURL=bootstrap.css.map */

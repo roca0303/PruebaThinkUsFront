@@ -7,15 +7,17 @@ import '../../index.css';
 import { classNames } from 'primereact/utils';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { EmpleadoService } from '../DataTables/EmpleadoService';
+//import { EmpleadoService } from '../DataTables/EmpleadoService';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Toolbar } from 'primereact/toolbar';
 import { Dialog } from 'primereact/dialog';
-import { Checkbox } from 'primereact/checkbox';
 import { InputText } from 'primereact/inputtext';
 import { FilterMatchMode, FilterService } from 'primereact/api';
 import useToken from '../App/useToken';
+import { AlumnoService } from '../Services/AlumnoService';
+import { Calendar } from 'primereact/calendar';
+import { Dropdown } from 'primereact/dropdown';
 
 
 function App() {
@@ -39,12 +41,22 @@ const DataTableCrudAlumno = () => {
     let emptyProduct = {
         id: null,
         nombre: '',
+        apellidos: '',
         posicion: '',
         descripcion: '',
+        FechaNacimiento: null,
+        genero: '',
         estado: true
     };
 
-    const [empleados, setEmpleados] = useState(null);
+    const genderOptions = [
+        { label: 'Masculino', value: 'male' },
+        { label: 'Femenino', value: 'female' },
+        { label: 'Otro', value: 'other' },
+        { label: 'No especifica', value: 'na' }
+    ];
+
+    const [alumnos, setAlumnos] = useState(null);
     const [productDialog, setProductDialog] = useState(false);
     const [deleteProductDialog, setDeleteProductDialog] = useState(false);
     const [deleteProductsDialog, setDeleteProductsDialog] = useState(false);
@@ -54,27 +66,27 @@ const DataTableCrudAlumno = () => {
     const [globalFilter, setGlobalFilter] = useState(null);
     const toast = useRef(null);
     const dt = useRef(null);
-    const empleadoService = new EmpleadoService();
+    const alumnoService = new AlumnoService();
     const { token } = useToken();
     const [permisoPagina, setPermisoPagina] = useState(null);
 
     const [filters, setFilters] = useState({
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-        posicion: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+        apellidos: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setLoading(false);
-        empleadoService.getTeamsList().then(data => {
+        alumnoService.getAlumnoList().then(data => {
             if (data === "Error"){
                 setPermisoPagina(null);
-                setEmpleados(null);
+                setAlumnos(null);
             }
             else{
                 setPermisoPagina(true);
-                setEmpleados(data);
+                setAlumnos(data);
             }
         });
     }, []);
@@ -98,41 +110,54 @@ const DataTableCrudAlumno = () => {
         setDeleteProductsDialog(false);
     }
 
+    const onInputChangeDateTime = (e, name) => {
+        const val = e.value; // `e.value` contiene el objeto Date que devuelve el Calendar
+        let _product = { ...product };
+        _product[name] = val; // Asigna directamente el objeto Date
+        setProduct(_product);
+
+
+        // const val = (e.target && e.target.value) || '';
+        // let _product = {...product};
+        // _product[`${name}`] = val;
+        // setProduct(_product);
+    }
+
     const saveProduct = async e => {
         setSubmitted(true);
-        let _products = [...empleados];
+        let _products = [...alumnos];
         let _product = {...product};
 
-
-        let nombre = _product.nombre;
-        let posicion = _product.posicion;
-        let descripcion = _product.descripcion;
-        let estado = true;
+        let Nombre = _product.nombre;
+        let Apellidos = _product.apellidos;
+        let Genero = _product.genero;
+        let FechaNacimiento = _product.fechaNacimiento;
 
         // evaluar que no venga vacio ningun campo
-        if (nombre === '' || posicion === '' || descripcion === '' || estado === ''){
+        if (Nombre === '' || Apellidos === '' || Genero === '' || FechaNacimiento === ''){
+            console.log(_product);
             return;
         }
 
         // validar que los campos sean correctos y no tengan caracteres especiales
-        if (nombre.match(/^[a-zA-Z\s]*$/) === null || posicion.match(/^[a-zA-Z\s]*$/) === null || descripcion.match(/^[a-zA-Z\s]*$/) === null){
+        if (Nombre.match(/^[a-zA-Z\s]*$/) === null || Apellidos.match(/^[a-zA-Z\s]*$/) === null || Genero.match(/^[a-zA-Z\s]*$/) === null){
             toast.current.show({ severity: 'warn', summary: 'Advertencia', detail: 'Caracteres invalidos', life: 3000 });
             return;
         }
-
+        
         if (product.id) {
 
             //const index = findIndexById(product.id);
-            const newTeamResponse = await empleadoService.updateEmpleado({
+            const newTeamResponse = await alumnoService.updateEmpleado({
                 id: product.id,
-                nombre: product.nombre,
-                posicion: product.posicion,
-                descripcion: product.descripcion,
-                estado: product.estado
+                Nombre: product.nombre,
+                Apellidos: product.apellidos,
+                Genero: product.genero,
+                FechaNacimiento: product.fechaNacimiento
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
+                alumnoService.getAlumnoList(token).then(data => setAlumnos(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Actualizado Correctamente', life: 3000 });
                 _products.push(_product);
             }
@@ -141,15 +166,15 @@ const DataTableCrudAlumno = () => {
             }
         }
         else {
-            const newTeamResponse = await empleadoService.newEmpleado({
-                nombre,
-                posicion,
-                descripcion,
-                estado
+            const newTeamResponse = await alumnoService.newEmpleado({
+                Nombre,
+                Apellidos,
+                Genero,
+                FechaNacimiento
             },token);
 
             if ( newTeamResponse.statusCode <= 300 ){
-                empleadoService.getTeamsList(token).then(data => setEmpleados(data));
+                alumnoService.getAlumnoList(token).then(data => setAlumnos(data));
                 toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleado Creado Correctamente', life: 3000 });
             }
             else{
@@ -162,6 +187,9 @@ const DataTableCrudAlumno = () => {
     }
 
     const editProduct = (product) => {
+        console.log({...product});
+        const fechaNacimientos = product.fechaNacimiento ? new Date(product.fechaNacimiento) : null;
+
         setProduct({...product});
         setProductDialog(true);
     }
@@ -173,14 +201,14 @@ const DataTableCrudAlumno = () => {
 
     const deleteProduct = () => {
         //let _empleados = empleados.filter(val => val.id === product.id);
-        let _empleados_avaibles = empleados.filter(val => val.id !== product.id);
+        let _empleados_avaibles = alumnos.filter(val => val.id !== product.id);
 
         let id = product.id;
-        const deleteEmpleadoResponse = empleadoService.deleteEmpleado({
+        const deleteEmpleadoResponse = alumnoService.deleteEmpleado({
             id
         },token);
 
-        setEmpleados(_empleados_avaibles);
+        setAlumnos(_empleados_avaibles);
         setDeleteProductDialog(false);
         setProduct(emptyProduct);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
@@ -191,17 +219,17 @@ const DataTableCrudAlumno = () => {
     }
 
     const deleteSelectedProducts = () => {
-        let _empleados = empleados.filter(val => selectedProducts.includes(val));
-        let _empleados_avaibles = empleados.filter(val => !selectedProducts.includes(val));
+        let _empleados = alumnos.filter(val => selectedProducts.includes(val));
+        let _empleados_avaibles = alumnos.filter(val => !selectedProducts.includes(val));
 
         _empleados.map ( async (product) => {
             let id = product.id;
-            const deleteEmpleadoResponse = await empleadoService.deleteEmpleado({
+            const deleteEmpleadoResponse = await alumnoService.deleteEmpleado({
                 id
             },token);
         });
 
-        setEmpleados(_empleados_avaibles);
+        setAlumnos(_empleados_avaibles);
         setDeleteProductsDialog(false);
         setSelectedProducts(null);
         toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Empleados Borrados', life: 3000 });
@@ -270,7 +298,7 @@ const DataTableCrudAlumno = () => {
                 <div className="card">
                     <Toolbar className="mb-4" left={leftToolbarTemplate} ></Toolbar>
 
-                    <DataTable ref={dt} value={empleados} className="data-table-80" selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
+                    <DataTable ref={dt} value={alumnos} className="data-table-80" selection={selectedProducts} onSelectionChange={(e) => setSelectedProducts(e.value)}
                         dataKey="id" paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} selecciones"
@@ -280,40 +308,49 @@ const DataTableCrudAlumno = () => {
                         <Column selectionMode="multiple" exportable={false}></Column>
                         <Column field="id" header="id" sortable style={{ minWidth: '6rem' }}></Column>
                         <Column field="nombre" header="nombre" filter filterPlaceholder="Buscar por nombre" sortable style={{ minWidth: '6rem' }}></Column>
-                        <Column field="posicion" header="posicion" filter filterPlaceholder="Buscar por posicion"  filterField="posicion"  sortable style={{ minWidth: '6rem' }} ></Column>
-                        <Column field="descripcion" header="descripcion" sortable style={{ minWidth: '6rem' }} ></Column>
-                        <Column 
-                            field="estado" 
-                            header="estado" 
-                            sortable 
-                            style={{ minWidth: '6rem' }} 
-                            body={rowData => rowData.estado === true ? 'Activo' : 'Inactivo'}> 
-                        </Column>
+                        <Column field="apellidos" header="apellidos" filter filterPlaceholder="Buscar por posicion"  filterField="apellidos"  sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="genero" header="Genero" sortable style={{ minWidth: '6rem' }} ></Column>
+                        <Column field="fechaNacimiento" header="FechaNacimiento" sortable style={{ minWidth: '6rem' }} ></Column>
                         <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '12rem' }}></Column>
-
                     </DataTable>
                 </div>
 
-                <Dialog visible={productDialog} style={{ width: '450px' }} header="Nuevo Empleado" modal className="p-fluid" footer={productDialogFooter} onHide={hideDialog}>
+                <Dialog visible={productDialog} style={{ width: '450px' }} header="Nuevo Alumno" modal className="p-fluid" footer={productDialogFooter} onHide={hideDialog}>
 
                     <div className="field">
                         <label htmlFor="nombre">Nombre</label>
                         <InputText id="nombre" value={product.nombre} onChange={(e) => onInputChange(e, 'nombre')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.nombre })} />
                         {submitted && !product.nombre && <small className="p-error">El Nombre es requerido.</small>}
                     </div>
+
                     <div className="field">
-                        <label htmlFor="posicion">Posicion</label>
-                        <InputText id="posicion" value={product.posicion} onChange={(e) => onInputChange(e, 'posicion')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.posicion })} />
-                        {submitted && !product.posicion && <small className="p-error">La Posición del empleado es requerida.</small>}
+                        <label htmlFor="apellidos">Apellidos</label>
+                        <InputText id="apellidos" value={product.apellidos} onChange={(e) => onInputChange(e, 'apellidos')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.apellidos })} />
+                        {submitted && !product.apellidos && <small className="p-error">El Apellido es requerido.</small>}
                     </div>
+
                     <div className="field">
-                        <label htmlFor="descripcion">Descripción</label>
-                        <InputText id="descripcion" value={product.descripcion} onChange={(e) => onInputChange(e, 'descripcion')} required autoFocus className={classNames({ 'p-invalid': submitted && !product.descripcion })} />
-                        {submitted && !product.descripcion && <small className="p-error">La descripción del empleado es requerida.</small>}
+                        <label htmlFor="Genero">Género</label>
+                        <Dropdown
+                            id="genero"
+                            value={product.genero}
+                            options={genderOptions}
+                            onChange={(e) => onInputChange(e, 'genero')}
+                            placeholder="Seleccione un género"
+                            className={classNames({ 'p-invalid': submitted && !product.genero })}
+                        />
+                        {submitted && !product.genero && (
+                            <small className="p-error">El género del alumno es requerido.</small>
+                        )}
                     </div>
-                    <div className="field-checkbox">
-                        <Checkbox inputId="estado" checked={product.estado} onChange={(e) => onInputChange(e, 'estado')} />
-                        <label htmlFor="estado">Activo</label>
+
+                    <div className="field">
+                        <label htmlFor="Fecha Nacimiento:">Fecha Nacimiento</label>
+                        <div className="field col-12 md:col-4">
+                            <label htmlFor="fechaNacimiento">Time / 24h</label>
+                            <Calendar dateFormat="mm/dd/yy" id="fechaNacimiento" value={product.fechaNacimiento} onChange={(e) => onInputChangeDateTime(e,'fechaNacimiento')}  />
+                        </div>
+                        
                     </div>
                 </Dialog>
 

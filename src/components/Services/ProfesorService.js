@@ -1,9 +1,9 @@
 
-export class EmpleadoService {
+export class ProfesorService {
 
-    async getTeamsList() {
+    async getProfesorList() {
         try {
-            const response = await fetch('http://localhost:43497/api/Empleado', {
+            const response = await fetch('http://localhost:43497/api/Profesor', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -12,18 +12,18 @@ export class EmpleadoService {
             });
     
             if (!response.ok) {
-                return "Error"; // O lanza un error si prefieres
+                return "Error";
             }
     
             const data = await response.json();
             return data; // Retorna los datos correctamente
         } catch (error) {
-            return "Error"; // O lanza un error si prefieres
+            return "Error";
         }
     }
-//RXJS PATRIN DE DISEÑO
-    newEmpleado(empleadoData, token) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado', {
+
+    newProfesor(empleadoData, token) {
+        var respuesta = fetch('http://localhost:43497/api/Profesor', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -45,8 +45,8 @@ export class EmpleadoService {
         return respuesta;
     }
 
-    deleteEmpleado(id) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado/'+id.id, {
+    deleteProfesor(id) {
+        var respuesta = fetch('http://localhost:43497/api/Profesor/'+id.id, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -67,8 +67,8 @@ export class EmpleadoService {
         return respuesta;
     }
 
-    updateEmpleado(empleadoData) {
-        var respuesta = fetch('http://localhost:43497/api/Empleado/'+empleadoData.id, {
+    updateProfesor(empleadoData) {
+        var respuesta = fetch('http://localhost:43497/api/Profesor/'+empleadoData.id, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
